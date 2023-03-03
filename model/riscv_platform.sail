@@ -420,6 +420,19 @@ function htif_store(paddr, width, data) = {
         then print_platform("htif-syscall-proxy cmd: " ^ BitStr(cmd.payload()));
         if   cmd.payload()[0] == bitone
         then {
+             /* cache */
+             if cache_log then {
+               print_cache_stats();
+               match cache_log_type {
+                 O => (),
+                 LV1 => print_l1_cache_stats(),
+                 LV2 => {
+                   print_l1_cache_stats();
+                   print_l2_cache_stats()
+                 }
+               }
+             };
+             /* cache */
              htif_done = true;
              htif_exit_code = (sail_zero_extend(cmd.payload(), 64) >> 1)
         }
