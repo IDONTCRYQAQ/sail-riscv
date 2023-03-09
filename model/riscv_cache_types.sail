@@ -1,11 +1,12 @@
 /* cache type */
 enum cache_name = {L1I, L1D, L2}	
-enum cache_policy_t = {LRU, FIFO, RANDOM}
+enum cache_policy_t = {LRU, FIFO, RAND}
 enum cache_log_t = {O, LV1, LV2}
 /* common cache config */
-let cache_policy = LRU
+let cache_policy = FIFO
 type linesz_t : Int = 64/* byte */
 let cache_log : bool = true
+let cache_trace : bool = true
 let cache_log_type : cache_log_t = LV2
 
 /* cache config */

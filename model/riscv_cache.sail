@@ -77,7 +77,10 @@ function cache_init() -> unit = {
 	// print_int("victim = ", get_victim());
 	l1i_cache_clean_invalidate();
 	l1d_cache_clean_invalidate();
-	l2_cache_clean_invalidate()
+	l2_cache_clean_invalidate();
+	l1i_cache_init();
+	l1d_cache_init();
+	l2_cache_init()
 }
 
 /* get cache set */
@@ -89,7 +92,7 @@ function get_set(addr, sets) = {
 /* get cache set */
 
 /* match tag */
-function match_l1i_tag(addr: xlenbits) -> option(range(0, l1i_ways_t - 1)) = {
+function match_l1i_tag(addr: xlenbits) -> option(l1i_wi_t) = {
 	let set = get_set(addr, l1i_sets);
 	let tag = (addr >> idx_shift) | valid;
 	foreach (i from 0 to (l1i_ways - 1)) {
@@ -97,7 +100,7 @@ function match_l1i_tag(addr: xlenbits) -> option(range(0, l1i_ways_t - 1)) = {
 	};
 	return None()
 }
-function match_l1d_tag(addr: xlenbits) -> option(range(0, l1d_ways_t - 1)) = {
+function match_l1d_tag(addr: xlenbits) -> option(l1d_wi_t) = {
 	let set = get_set(addr, l1d_sets);
 	let tag = (addr >> idx_shift) | valid;
 	foreach (i from 0 to (l1d_ways - 1)) {
@@ -105,7 +108,7 @@ function match_l1d_tag(addr: xlenbits) -> option(range(0, l1d_ways_t - 1)) = {
 	};
 	return None()
 }
-function match_l2_tag(addr: xlenbits) -> option(range(0, l2_ways_t - 1)) = {
+function match_l2_tag(addr: xlenbits) -> option(l2_wi_t) = {
 	let set = get_set(addr, l2_sets);
 	let tag = (addr >> idx_shift) | valid;
 	foreach (i from 0 to (l2_ways - 1)) {
@@ -129,6 +132,101 @@ function get_victim_way(ways) = {
 	lfsr_next();
 	min(acc, ways - 1)
 }
+
+function update_l1i_way(set: l1i_si_t, way: l1i_wi_t) -> unit = {
+	let (head_way, tail_way) = (l1i_head_way[set], l1i_tail_way[set]);
+	if way == head_way then return ();
+	if way != tail_way then {
+		let (prev, next) = (l1i_way_prev[set][way], l1i_way_next[set][way]);
+		l1i_way_prev[set][next] = next; l1i_way_next[set][prev] = prev
+	};
+	l1i_way_next[set][head_way] = way;
+	l1i_way_prev[set][way] = head_way;
+	l1i_head_way[set] = way;
+	if way == tail_way then l1i_tail_way[set] = l1i_way_next[set][way]
+}
+function update_l1d_way(set:l1d_si_t, way: l1d_wi_t) -> unit = {
+	let (head_way, tail_way) = (l1d_head_way[set], l1d_tail_way[set]);
+	if way == head_way then return ();
+	if way != tail_way then {
+		let (prev, next) = (l1d_way_prev[set][way], l1d_way_next[set][way]);
+		l1d_way_prev[set][next] = next; l1d_way_next[set][prev] = prev
+	};
+	l1d_way_next[set][head_way] = way;
+	l1d_way_prev[set][way] = head_way;
+	l1d_head_way[set] = way;
+	if way == tail_way then l1d_tail_way[set] = l1d_way_next[set][way]
+}
+function update_l2_way(set: l2_si_t, way: l2_wi_t) -> unit = {
+	let (head_way, tail_way) = (l2_head_way[set], l2_tail_way[set]);
+	if way == head_way then return ();
+	if way != tail_way then {
+		let (prev, next) = (l2_way_prev[set][way], l2_way_next[set][way]);
+		l2_way_prev[set][next] = next; l2_way_next[set][prev] = prev
+	};
+	l2_way_next[set][head_way] = way;
+	l2_way_prev[set][way] = head_way;
+	l2_head_way[set] = way;
+	if way == tail_way then l2_tail_way[set] = l2_way_next[set][way]
+}
+
+function get_l1i_victim_way(set: l1i_si_t) -> l1i_wi_t = {
+	match cache_policy {
+		LRU => {
+			let victim_way = l1i_tail_way[set];
+			update_l1i_way(set, l1i_tail_way[set]);
+			victim_way
+		},
+		FIFO => {
+			let victim_way = l1i_head_way[set];
+			if victim_way == l1i_ways - 1 
+			then l1i_head_way[set] = 0
+			else l1i_head_way[set] = victim_way + 1;
+			victim_way
+		},
+		RAND => {
+			get_victim_way(l1i_ways)
+		}
+	}
+}
+function get_l1d_victim_way(set: l1d_si_t) -> l1d_wi_t = {
+	match cache_policy {
+		LRU => {
+			let victim_way = l1d_tail_way[set];
+			update_l1d_way(set, l1d_tail_way[set]);
+			victim_way
+		},
+		FIFO => {
+			let victim_way = l1d_head_way[set];
+			if victim_way == l1d_ways - 1 
+			then l1d_head_way[set] = 0
+			else l1d_head_way[set] = victim_way + 1;
+			victim_way
+		},
+		RAND => {
+			get_victim_way(l1d_ways)
+		}
+	}
+}
+function get_l2_victim_way(set: l2_si_t) -> l2_wi_t = {
+	match cache_policy {
+		LRU => {
+			let victim_way = l2_tail_way[set];
+			update_l2_way(set, l2_tail_way[set]);
+			victim_way
+		},
+		FIFO => {
+			let victim_way = l2_head_way[set];
+			if victim_way == l2_ways - 1 
+			then l2_head_way[set] = 0
+			else l2_head_way[set] = victim_way + 1;
+			victim_way
+		},
+		RAND => {
+			get_victim_way(l2_ways)
+		}
+	}
+}
 /* get victim way */
 
 function l2_cache_access(addr: xlenbits, store: bool) -> unit = {
@@ -146,13 +244,13 @@ function l2_cache_access(addr: xlenbits, store: bool) -> unit = {
 			if store then write_misses = write_misses + 1
 			else read_misses = read_misses + 1;
 			
-			if cache_log then {
+			if cache_trace then {
 				print("L2 cache: ");
 				if store then print("write miss" ^ BitStr(addr))
 				else print("read miss" ^ BitStr(addr))
 			};
 			
-			victim_way = get_victim_way(l2_ways);
+			victim_way = get_l2_victim_way(set);
 			victim : xlenbits = l2_cache[set][victim_way];
 			if (victim & vadty) == vadty 
 			then l2_writebacks = l2_writebacks + 1;
@@ -179,13 +277,13 @@ function l1i_cache_access(addr: xlenbits/*, store: bool*/) -> unit = {
 			/* if store then l1i_write_misses = l1i_write_misses + 1
 			else */ l1i_read_misses = l1i_read_misses + 1;
 			
-			if cache_log then {
+			if cache_trace then {
 				print("L1I cache: ");
 				/* if store then print("write miss" ^ BitStr(addr))
 				else */print("read miss" ^ BitStr(addr))
 			};
 			
-			victim_way = get_victim_way(l1i_ways);
+			victim_way = get_l1i_victim_way(set);
 			/*
 			victim : xlenbits = l1i_cache[set][victim_way]
 			if (victim & vadty) == vadty then {
@@ -218,13 +316,13 @@ function l1d_cache_access(addr: xlenbits, store: bool) -> unit = {
 			if store then l1d_write_misses = l1d_write_misses + 1
 			else l1d_read_misses = l1d_read_misses + 1;
 			
-			if cache_log then {
+			if cache_trace then {
 				print("L1D cache: ");
 				if store then print("write miss" ^ BitStr(addr))
 				else print("read miss" ^ BitStr(addr))
 			};
 			
-			victim_way = get_victim_way(l1d_ways);
+			victim_way = get_l1d_victim_way(set);
 			victim : xlenbits = l1d_cache[set][victim_way];
 			if (victim & vadty) == vadty then {
 				victim_addr = (victim & (~(vadty))) << idx_shift;

@@ -15,6 +15,14 @@ let l1d_ways : int(l1d_ways_t) = sizeof(l1d_ways_t)
 let l2_sets : int(l2_sets_t) = sizeof(l2_sets_t)
 let l2_ways : int(l2_ways_t) = sizeof(l2_ways_t)
 
+/* way index type */
+type l1i_si_t = range(0, l1i_sets_t - 1)
+type l1i_wi_t = range(0, l1i_ways_t - 1)
+type l1d_si_t = range(0, l1d_sets_t - 1)
+type l1d_wi_t = range(0, l1d_ways_t - 1)
+type l2_si_t = range(0, l2_sets_t - 1)
+type l2_wi_t = range(0, l2_ways_t - 1)
+
 /* cache info */
 let valid : xlenbits = to_bits(sizeof(xlen), 1) << 63
 let dirty : xlenbits = to_bits(sizeof(xlen), 1) << 62
@@ -42,8 +50,26 @@ register l2_read_misses : int = 0
 register l2_write_accesses : int = 0
 register l2_write_misses : int = 0
 register l2_writebacks : int = 0
-/* lfsr */
+
+/* policy */
+/* RANDOM (lfsr) */
 register lfsr : bits(32) = to_bits(sizeof(32), 1)
+/* LRU or FIFO */
+/* l1i */
+register l1i_way_prev : vector(l1i_sets_t, dec, vector(l1i_ways_t, dec, l1i_wi_t))
+register l1i_way_next : vector(l1i_sets_t, dec, vector(l1i_ways_t, dec, l1i_wi_t))
+register l1i_head_way : vector(l1i_sets_t, dec, l1i_wi_t)
+register l1i_tail_way : vector(l1i_sets_t, dec, l1i_wi_t)
+/* l1d */
+register l1d_way_prev : vector(l1d_sets_t, dec, vector(l1d_ways_t, dec, l1d_wi_t))
+register l1d_way_next : vector(l1d_sets_t, dec, vector(l1d_ways_t, dec, l1d_wi_t))
+register l1d_head_way : vector(l1d_sets_t, dec, l1d_wi_t)
+register l1d_tail_way : vector(l1d_sets_t, dec, l1d_wi_t)
+/* l2 */
+register l2_way_prev : vector(l2_sets_t, dec, vector(l2_ways_t, dec, l2_wi_t))
+register l2_way_next : vector(l2_sets_t, dec, vector(l2_ways_t, dec, l2_wi_t))
+register l2_head_way : vector(l2_sets_t, dec, l2_wi_t)
+register l2_tail_way : vector(l2_sets_t, dec, l2_wi_t)
 
 /* cache entry */
 register l1i_cache : vector(l1i_sets_t, dec, vector(l1i_ways_t, dec, xlenbits))
@@ -71,13 +97,52 @@ function l1d_cache_clean_invalidate() -> unit = {
 	}
 }
 function l2_cache_clean_invalidate() -> unit = {
-  foreach (i from 0 to (l2_sets - 1)) {
+	foreach (i from 0 to (l2_sets - 1)) {
 		foreach (j from 0 to (l2_ways - 1)) {
 			l2_cache[i][j] = ~(vadty)
 		}
 	}
 }
 /* cache_clean_invalidate */
+
+/* lru or fifo init */
+function l1i_cache_init() -> unit = {
+  foreach (i from 0 to (l1i_sets - 1)) {
+		l1i_head_way[i] = l1i_ways - 1;
+		l1i_way_next[i][0] = 1;
+		foreach (j from 1 to (l1i_ways - 2)) {
+			l1i_way_prev[i][j] = j - 1;
+			l1i_way_next[i][j] = j + 1
+		};
+		l1i_way_prev[i][l1i_ways - 1] = l1i_ways - 2;
+		l1i_tail_way[i] = 0
+	};
+}
+function l1d_cache_init() -> unit = {
+  foreach (i from 0 to (l1d_sets - 1)) {
+		l1d_head_way[i] = l1d_ways - 1;
+		l1d_way_next[i][0] = 1;
+		foreach (j from 1 to (l1d_ways - 2)) {
+			l1d_way_prev[i][j] = j - 1;
+			l1d_way_next[i][j] = j + 1
+		};
+		l1d_way_prev[i][l1d_ways - 1] = l1d_ways - 2;
+		l1d_tail_way[i] = 0
+	};
+}
+function l2_cache_init() -> unit = {
+  foreach (i from 0 to (l2_sets - 1)) {
+		l2_head_way[i] = l2_ways - 1;
+		l2_way_next[i][0] = 1;
+		foreach (j from 1 to (l2_ways - 2)) {
+			l2_way_prev[i][j] = j - 1;
+			l2_way_next[i][j] = j + 1
+		};
+		l2_way_prev[i][l2_ways - 1] = l2_ways - 2;
+		l2_tail_way[i] = 0
+	};
+}
+/* lru or fifo init */
 
 function int_of_bits(xs: xlenbits) -> nat = {
 	acc : nat = 0; bound = sizeof(xlen) - 1;
