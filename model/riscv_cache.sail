@@ -237,6 +237,7 @@ function l2_cache_access(addr: xlenbits, store: bool) -> unit = {
 	let way_hit = match_l2_tag(addr);
 	match way_hit {
 		Some(hit_way) => {
+			if cache_policy == LRU then update_l2_way(set, hit_way);
 			if store then l2_cache[set][hit_way] = l2_cache[set][hit_way] | dirty;
 			return ()
 		},
@@ -270,6 +271,7 @@ function l1i_cache_access(addr: xlenbits/*, store: bool*/) -> unit = {
 	let way_hit = match_l1i_tag(addr);
 	match way_hit {
 		Some(hit_way) => {
+			if cache_policy == LRU then update_l1i_way(set, hit_way);
 			/* if store then l1i_cache[set][hit_way] = l1i_cache[set][hit_way] | dirty */
 			return ()
 		},
@@ -309,6 +311,7 @@ function l1d_cache_access(addr: xlenbits, store: bool) -> unit = {
 	let way_hit = match_l1d_tag(addr);
 	match way_hit {
 		Some(hit_way) => {
+			if cache_policy == LRU then update_l1d_way(set, hit_way);
 			if store then l1d_cache[set][hit_way] = l1d_cache[set][hit_way] | dirty;
 			return ()
 		},
