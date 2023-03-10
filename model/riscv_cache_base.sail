@@ -108,6 +108,7 @@ function l2_cache_clean_invalidate() -> unit = {
 /* lru or fifo init */
 function l1i_cache_init() -> unit = {
   foreach (i from 0 to (l1i_sets - 1)) {
+		if l1i_ways == 1 then return();
 		l1i_head_way[i] = l1i_ways - 1;
 		l1i_way_next[i][0] = 1;
 		foreach (j from 1 to (l1i_ways - 2)) {
@@ -120,6 +121,7 @@ function l1i_cache_init() -> unit = {
 }
 function l1d_cache_init() -> unit = {
   foreach (i from 0 to (l1d_sets - 1)) {
+		if l1d_ways == 1 then return();
 		l1d_head_way[i] = l1d_ways - 1;
 		l1d_way_next[i][0] = 1;
 		foreach (j from 1 to (l1d_ways - 2)) {
@@ -132,6 +134,7 @@ function l1d_cache_init() -> unit = {
 }
 function l2_cache_init() -> unit = {
   foreach (i from 0 to (l2_sets - 1)) {
+		if l2_ways == 1 then return();
 		l2_head_way[i] = l2_ways - 1;
 		l2_way_next[i][0] = 1;
 		foreach (j from 1 to (l2_ways - 2)) {
