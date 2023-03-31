@@ -171,8 +171,11 @@ function print_cache_stats() -> unit = {
 	print_int("Writebacks:            ", writebacks);
 	miss = read_misses + write_misses; access = read_accesses + write_accesses;
 	miss_rate = dec_str(tdiv_int(100 * miss, access));
-	miss_rate_dot = dec_str(tdiv_int(1000 * ((100 * miss) % access), access));
-	print("Miss Rate:             " ^ miss_rate ^ "." ^ miss_rate_dot ^ "%");
+	miss_rate_dot = tdiv_int(1000 * ((100 * miss) % access), access);
+	zero_padding = "";
+	if miss_rate_dot <= 10 then zero_padding = "00"
+	else if miss_rate_dot <= 100 then zero_padding = "0";
+	print("Miss Rate:             " ^ miss_rate ^ "." ^ zero_padding ^ dec_str(miss_rate_dot) ^ "%");
 }
 
 function print_l1_cache_stats() -> unit = {
@@ -186,8 +189,13 @@ function print_l1_cache_stats() -> unit = {
 	l1i_miss = l1i_read_misses/* + l1i_write_misses*/;
 	l1i_access = l1i_read_accesses/* + l1i_write_accesses*/;
 	l1i_miss_rate = dec_str(tdiv_int(100 * l1i_miss, l1i_access));
-	l1i_miss_rate_dot = dec_str(tdiv_int(1000 * ((100 * l1i_miss) % l1i_access), l1i_access));
-	print("Miss Rate:             " ^ l1i_miss_rate ^ "." ^ l1i_miss_rate_dot ^ "%");
+	l1i_miss_rate_dot = tdiv_int(1000 * ((100 * l1i_miss) % l1i_access), l1i_access);
+	/* print */
+	zero_padding = "";
+	if l1i_miss_rate_dot <= 10 then zero_padding = "00"
+	else if l1i_miss_rate_dot <= 100 then zero_padding = "0";
+	print("Miss Rate:             " ^ l1i_miss_rate ^ "." ^ zero_padding ^ dec_str(l1i_miss_rate_dot) ^ "%");
+	
 	/* L1D */
 	print("---------L1 Data Cache Info---------");
 	print_int("Read Accesses:         ", l1d_read_accesses);
@@ -198,8 +206,13 @@ function print_l1_cache_stats() -> unit = {
 	l1d_miss = l1d_read_misses + l1d_write_misses;
 	l1d_access = l1d_read_accesses + l1d_write_accesses;
 	l1d_miss_rate = dec_str(tdiv_int(100 * l1d_miss, l1d_access));
-	l1d_miss_rate_dot = dec_str(tdiv_int(1000 * ((100 * l1d_miss) % l1d_access), l1d_access));
-	print("Miss Rate:             " ^ l1d_miss_rate ^ "." ^ l1d_miss_rate_dot ^ "%");
+	l1d_miss_rate_dot = tdiv_int(1000 * ((100 * l1d_miss) % l1d_access), l1d_access);
+		/* print */
+	zero_padding = "";
+	if l1d_miss_rate_dot <= 10 then zero_padding = "00"
+	else if l1d_miss_rate_dot <= 100 then zero_padding = "0";
+	print("Miss Rate:             " ^ l1d_miss_rate ^ "." ^ zero_padding ^ dec_str(l1d_miss_rate_dot) ^ "%");
+
 }
 
 function print_l2_cache_stats() -> unit = {
