@@ -89,6 +89,9 @@ function fetch() -> FetchResult =
            * well as to generate precise fault addresses in any fetch
            * exceptions.
            */
+          /* cache */
+          l1i_cache_access(ppclo);
+          /* cache */
           match mem_read(Execute(), ppclo, 2, false, false, false) {
             MemException(e) => F_Error(e, PC),
             MemValue(ilo)   => {
