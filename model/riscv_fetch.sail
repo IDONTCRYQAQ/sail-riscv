@@ -106,9 +106,6 @@ function fetch() -> FetchResult =
                     match translateAddr(use_pc_hi, Execute()) {
                       TR_Failure(e, _)     => F_Error(e, PC_hi),
                       TR_Address(ppchi, _) => {
-                        /* cache */
-                        l1i_cache_access(ppchi);
-                        /* cache */
                         match mem_read(Execute(), ppchi, 2, false, false, false) {
                           MemException(e) => F_Error(e, PC_hi),
                           MemValue(ihi)   => F_Base(append(ihi, ilo))
